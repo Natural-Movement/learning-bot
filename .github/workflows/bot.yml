@@ -2,9 +2,9 @@ name: Telegram Learning Bot
 
 on:
   workflow_dispatch:    # 수동 실행 가능
-  schedule:
+#  schedule:
     # UTC 시간 기준. 한국시간 6시간마다 실행
-    - cron: '0 */6 * * *'
+#   - cron: '0 */6 * * *'
 
 jobs:
   run-bot:
