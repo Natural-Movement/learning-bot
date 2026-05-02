@@ -20,6 +20,11 @@ from gtts import gTTS
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
+
+print("========================================")
+print("!!! 제미나이 2.5 버전 코드 실행 확인 !!!")
+print("========================================")
+
 # 로깅 설정
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
