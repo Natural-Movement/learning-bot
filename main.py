@@ -330,15 +330,6 @@ def main():
     application.add_handler(CommandHandler('stats', stats_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     
-    logger.info("봇 시작!")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-def main():
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-    
-    # ... (기존 핸들러 코드들) ...
-    
-    # 봇 시작 전에 현재 Gemini 라이브러리 버전을 출력하도록 추가
     logger.info(f"현재 설치된 Gemini 라이브러리 버전: {genai.__version__}")
     logger.info("봇 시작!")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
