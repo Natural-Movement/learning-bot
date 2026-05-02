@@ -1,0 +1,35 @@
+name: Telegram Learning Bot
+
+on:
+  workflow_dispatch:    # 수동 실행 가능
+  schedule:
+    # UTC 시간 기준. 한국시간 6시간마다 실행
+    - cron: '0 */6 * * *'
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350    # 약 6시간 동안 봇 실행
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          MY_TELEGRAM_ID: ${{ secrets.MY_TELEGRAM_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
+        run: python main.py
