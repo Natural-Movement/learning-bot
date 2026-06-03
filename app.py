@@ -1,5 +1,5 @@
 """
-학습 자동화 앱 (Streamlit PWA)
+장원덕 학습 자동화 앱 (Streamlit PWA)
 """
 import os
 import json
