@@ -89,8 +89,25 @@ def apply_theme(theme: str) -> None:
             [data-testid="stSidebar"] {
                 background: var(--tw-slate-900);
             }
+            [data-testid="stSidebar"],
+            [data-testid="collapsedControl"] {
+                display: none;
+            }
             .block-container {
                 padding-top: 2rem;
+            }
+            .theme-panel {
+                background: var(--tw-slate-800);
+                border: 1px solid var(--tw-slate-700);
+                border-radius: 8px;
+                padding: 14px 16px;
+                margin-bottom: 18px;
+            }
+            .theme-panel p {
+                margin: 0 0 8px 0;
+                color: var(--tw-slate-200);
+                font-size: 0.9rem;
+                font-weight: 600;
             }
             h1, h2, h3, h4, h5, h6,
             p, span, label, div,
@@ -187,6 +204,23 @@ def apply_theme(theme: str) -> None:
             .block-container {
                 padding-top: 2rem;
             }
+            [data-testid="stSidebar"],
+            [data-testid="collapsedControl"] {
+                display: none;
+            }
+            .theme-panel {
+                background: var(--tw-slate-50);
+                border: 1px solid var(--tw-slate-200);
+                border-radius: 8px;
+                padding: 14px 16px;
+                margin-bottom: 18px;
+            }
+            .theme-panel p {
+                margin: 0 0 8px 0;
+                color: var(--tw-slate-700);
+                font-size: 0.9rem;
+                font-weight: 600;
+            }
             .stButton button {
                 border-radius: 8px;
             }
@@ -215,11 +249,20 @@ apply_theme(selected_theme)
 
 
 def render_theme_selector() -> None:
+    st.markdown(
+        """
+        <div class="theme-panel">
+            <p>화면 모드</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     selected = st.radio(
-        "화면 모드",
+        "화면 모드 선택",
         ["라이트 모드", "다크 모드"],
         horizontal=True,
         key="selected_theme",
+        label_visibility="collapsed",
     )
     if selected != selected_theme:
         st.rerun()
