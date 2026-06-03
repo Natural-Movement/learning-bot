@@ -12,11 +12,12 @@ import plotly.express as px
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import google.generativeai as genai
-from gtts import gTTS
+import asyncio
+import edge_tts
 
 # ==================== 설정 ====================
 st.set_page_config(
-    page_title="장원덕 학습",
+    page_title="Learning Bot",
     page_icon="🎓",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -29,6 +30,22 @@ GOOGLE_CREDS_JSON = st.secrets["GOOGLE_CREDS_JSON"]
 APP_PASSWORD = st.secrets["APP_PASSWORD"]
 
 REVIEW_INTERVALS = [1, 3, 7, 14, 30]
+TTS_VOICES = {
+    "한국어 여성 - SunHi": "ko-KR-SunHiNeural",
+    "한국어 남성 - InJoon": "ko-KR-InJoonNeural",
+    "영어 여성 - Jenny": "en-US-JennyNeural",
+    "영어 남성 - Guy": "en-US-GuyNeural",
+    "일본어 여성 - Nanami": "ja-JP-NanamiNeural",
+    "중국어 여성 - Xiaoxiao": "zh-CN-XiaoxiaoNeural"
+}
+
+TTS_RATES = {
+    "매우 느리게": "-30%",
+    "느리게": "-15%",
+    "보통": "+0%",
+    "빠르게": "+15%",
+    "매우 빠르게": "+30%"
+}
 
 # Gemini 초기화
 genai.configure(api_key=GEMINI_API_KEY)
@@ -43,7 +60,7 @@ def check_password():
     if st.session_state.authenticated:
         return True
     
-    st.title("🎓 장원덕 학습 시스템")
+    st.title("🎓 Learning Bot")
     pw = st.text_input("비밀번호", type="password")
     if st.button("입장"):
         if pw == APP_PASSWORD:
@@ -127,12 +144,25 @@ def enrich_content(domain: str, content: str) -> str:
     except Exception as e:
         return f"AI 가공 실패: {e}"
 
-def text_to_speech(text: str) -> bytes:
-    tts = gTTS(text=text, lang='ko', slow=False)
-    buffer = BytesIO()
-    tts.write_to_fp(buffer)
-    buffer.seek(0)
-    return buffer.read()
+async def make_edge_tts_audio(text: str, voice: str, rate: str) -> bytes:
+    communicate = edge_tts.Communicate(
+        text=text,
+        voice=voice,
+        rate=rate
+    )
+    
+    audio_buffer = BytesIO()
+    
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_buffer.write(chunk["data"])
+    
+    audio_buffer.seek(0)
+    return audio_buffer.read()
+
+
+def text_to_speech(text: str, voice: str, rate: str) -> bytes:
+    return asyncio.run(make_edge_tts_audio(text, voice, rate))
 
 def get_next_review_date(review_count: int) -> str:
     if review_count >= len(REVIEW_INTERVALS):
@@ -145,7 +175,23 @@ def main():
     if not check_password():
         return
     
-    st.title("🎓 장원덕 학습 시스템")
+    st.title("🎓 Learning Bot")
+
+    with st.expander("🔊 음성 설정", expanded=True):
+    voice_label = st.selectbox(
+        "목소리 선택",
+        list(TTS_VOICES.keys()),
+        index=0
+    )
+    
+    rate_label = st.selectbox(
+        "읽기 속도",
+        list(TTS_RATES.keys()),
+        index=2
+    )
+    
+    selected_voice = TTS_VOICES[voice_label]
+    selected_rate = TTS_RATES[rate_label]
     
     # 탭 구조
     tab1, tab2, tab3, tab4 = st.tabs(["📝 입력", "🎧 오늘 복습", "📊 대시보드", "📚 전체"])
@@ -192,7 +238,7 @@ def main():
                 
                 st.subheader("🔊 음성 미리듣기")
                 with st.spinner("음성 생성 중..."):
-                    audio = text_to_speech(enriched)
+                    audio = text_to_speech(enriched, selected_voice, selected_rate)
                 st.audio(audio, format='audio/mp3')
                 st.cache_resource.clear()  # 데이터 새로고침
     
@@ -216,7 +262,7 @@ def main():
                     with st.expander(f"[{row['영역']}] {row['콘텐츠']}"):
                         st.write(row['AI가공내용'])
                         if st.button(f"🔊 음성 듣기", key=f"recent_{row['id']}"):
-                            audio = text_to_speech(row['AI가공내용'])
+                            audio = text_to_speech(row['AI가공내용'], selected_voice, selected_rate)
                             st.audio(audio, format='audio/mp3')
             else:
                 st.write(f"오늘 복습 대상: **{len(today_df)}개**")
