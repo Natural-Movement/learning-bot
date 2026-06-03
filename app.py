@@ -68,35 +68,101 @@ def apply_theme(theme: str) -> None:
         st.markdown(
             """
             <style>
+            :root {
+                --tw-slate-50: #f8fafc;
+                --tw-slate-100: #f1f5f9;
+                --tw-slate-200: #e2e8f0;
+                --tw-slate-300: #cbd5e1;
+                --tw-slate-400: #94a3b8;
+                --tw-slate-700: #334155;
+                --tw-slate-800: #1e293b;
+                --tw-slate-900: #0f172a;
+                --tw-emerald-400: #34d399;
+                --tw-emerald-500: #10b981;
+                --tw-blue-400: #60a5fa;
+            }
             .stApp {
-                background: #111827;
-                color: #f9fafb;
+                background: var(--tw-slate-900);
+                color: var(--tw-slate-50);
             }
             [data-testid="stHeader"],
             [data-testid="stSidebar"] {
-                background: #111827;
+                background: var(--tw-slate-900);
+            }
+            .block-container {
+                padding-top: 2rem;
+            }
+            h1, h2, h3, h4, h5, h6,
+            p, span, label, div,
+            [data-testid="stMarkdownContainer"],
+            [data-testid="stCaptionContainer"],
+            [data-testid="stWidgetLabel"],
+            [data-testid="stMetricLabel"],
+            [data-testid="stMetricValue"],
+            [data-testid="stMetricDelta"] {
+                color: var(--tw-slate-50);
             }
             [data-testid="stExpander"],
             div[data-testid="stMetric"],
-            div[data-testid="stDataFrame"] {
-                background: #1f2937;
-                border-color: #374151;
-                color: #f9fafb;
+            div[data-testid="stDataFrame"],
+            [data-testid="stAlert"],
+            [data-testid="stVerticalBlockBorderWrapper"] {
+                background: var(--tw-slate-800);
+                border-color: var(--tw-slate-700);
+                color: var(--tw-slate-50);
+                border-radius: 8px;
             }
             .stTextInput input,
             .stTextArea textarea,
-            .stSelectbox div[data-baseweb="select"] > div {
-                background: #1f2937;
-                color: #f9fafb;
-                border-color: #4b5563;
+            .stSelectbox div[data-baseweb="select"] > div,
+            .stRadio [role="radiogroup"] label {
+                background: var(--tw-slate-800);
+                color: var(--tw-slate-50);
+                border-color: var(--tw-slate-700);
+            }
+            .stTextInput input::placeholder,
+            .stTextArea textarea::placeholder {
+                color: var(--tw-slate-400);
+            }
+            .stButton button {
+                border-radius: 8px;
+                border-color: var(--tw-slate-700);
+                background: var(--tw-slate-800);
+                color: var(--tw-slate-50);
+            }
+            .stButton button[kind="primary"],
+            .stButton button[data-testid="baseButton-primary"] {
+                background: var(--tw-emerald-500);
+                border-color: var(--tw-emerald-500);
+                color: #ffffff;
+            }
+            .stButton button:hover {
+                border-color: var(--tw-blue-400);
+                color: #ffffff;
             }
             .stTabs [data-baseweb="tab-list"] {
                 gap: 8px;
+                border-bottom-color: var(--tw-slate-700);
             }
             .stTabs [data-baseweb="tab"] {
-                background: #1f2937;
+                background: var(--tw-slate-800);
                 border-radius: 8px 8px 0 0;
-                color: #e5e7eb;
+                color: var(--tw-slate-200);
+                padding: 8px 14px;
+            }
+            .stTabs [aria-selected="true"] {
+                color: #ffffff;
+                border-bottom-color: var(--tw-emerald-400);
+            }
+            [data-testid="stExpander"] summary p,
+            [data-testid="stExpander"] summary span {
+                color: var(--tw-slate-50);
+            }
+            hr {
+                border-color: var(--tw-slate-700);
+            }
+            iframe {
+                color-scheme: dark;
             }
             </style>
             """,
@@ -106,9 +172,34 @@ def apply_theme(theme: str) -> None:
         st.markdown(
             """
             <style>
+            :root {
+                --tw-slate-50: #f8fafc;
+                --tw-slate-100: #f1f5f9;
+                --tw-slate-200: #e2e8f0;
+                --tw-slate-700: #334155;
+                --tw-slate-900: #0f172a;
+                --tw-emerald-500: #10b981;
+            }
             .stApp {
                 background: #ffffff;
-                color: #111827;
+                color: var(--tw-slate-900);
+            }
+            .block-container {
+                padding-top: 2rem;
+            }
+            .stButton button {
+                border-radius: 8px;
+            }
+            .stButton button[kind="primary"],
+            .stButton button[data-testid="baseButton-primary"] {
+                background: var(--tw-emerald-500);
+                border-color: var(--tw-emerald-500);
+                color: #ffffff;
+            }
+            [data-testid="stExpander"],
+            div[data-testid="stMetric"],
+            div[data-testid="stDataFrame"] {
+                border-radius: 8px;
             }
             </style>
             """,
@@ -116,9 +207,22 @@ def apply_theme(theme: str) -> None:
         )
 
 
-with st.sidebar:
-    selected_theme = st.radio("화면 모드", ["라이트 모드", "다크 모드"], horizontal=True)
+if "selected_theme" not in st.session_state:
+    st.session_state.selected_theme = "라이트 모드"
+
+selected_theme = st.session_state.selected_theme
 apply_theme(selected_theme)
+
+
+def render_theme_selector() -> None:
+    selected = st.radio(
+        "화면 모드",
+        ["라이트 모드", "다크 모드"],
+        horizontal=True,
+        key="selected_theme",
+    )
+    if selected != selected_theme:
+        st.rerun()
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")
@@ -262,6 +366,8 @@ def play_audio_button(label: str, key: str, text: str, voice: str, rate: str) ->
 
 
 def main() -> None:
+    render_theme_selector()
+
     if not check_password():
         return
 
