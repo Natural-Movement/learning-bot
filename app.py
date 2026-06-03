@@ -32,7 +32,7 @@ REVIEW_INTERVALS = [1, 3, 7, 14, 30]
 
 # Gemini 초기화
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # ==================== 인증 ====================
 def check_password():
