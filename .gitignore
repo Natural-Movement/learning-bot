@@ -1,0 +1,5 @@
+__pycache__/
+.playwright-cli/
+.streamlit/secrets.toml
+.streamlit/user_settings.json
+.streamlit/server*.log

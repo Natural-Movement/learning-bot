@@ -10,6 +10,7 @@ import asyncio
 import json
 from datetime import datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 
 import edge_tts
 import google.generativeai as genai
@@ -27,10 +28,80 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-SHEET_ID = st.secrets["SHEET_ID"]
-GOOGLE_CREDS_JSON = st.secrets["GOOGLE_CREDS_JSON"]
-APP_PASSWORD = st.secrets["APP_PASSWORD"]
+PROJECT_DIR = Path(__file__).resolve().parent
+SECRETS_PATH = PROJECT_DIR / ".streamlit" / "secrets.toml"
+REQUIRED_SECRETS = ("GEMINI_API_KEY", "SHEET_ID", "GOOGLE_CREDS_JSON")
+
+
+def stop_for_missing_secrets(missing: list[str], detail: Exception | None = None) -> None:
+    st.title("📚 Learning Bot")
+    st.error("앱 실행에 필요한 secrets 설정이 없습니다.")
+    st.markdown(
+        f"""
+        아래 파일을 만들고 누락된 항목을 채워 주세요.
+
+        `{SECRETS_PATH}`
+
+        누락된 항목: `{", ".join(missing)}`
+        """
+    )
+    st.code(
+        '''GEMINI_API_KEY = "본인_Gemini_API_Key"
+SHEET_ID = "본인_Google_Sheet_ID"
+GOOGLE_CREDS_JSON = """
+{
+  "type": "service_account",
+  "project_id": "본인_project_id",
+  "private_key_id": "본인_private_key_id",
+  "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n",
+  "client_email": "서비스계정@프로젝트.iam.gserviceaccount.com",
+  "client_id": "본인_client_id",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "본인_client_x509_cert_url"
+}
+"""''',
+        language="toml",
+    )
+    if detail:
+        st.caption("실제 비밀값은 이 대화에 붙여넣지 말고 secrets.toml 파일에만 저장하세요.")
+    st.stop()
+
+
+def load_required_secrets() -> dict[str, object]:
+    loaded: dict[str, object] = {}
+    missing: list[str] = []
+
+    for key in REQUIRED_SECRETS:
+        try:
+            value = st.secrets[key]
+        except KeyError:
+            missing.append(key)
+            continue
+        except Exception as exc:
+            stop_for_missing_secrets(list(REQUIRED_SECRETS), exc)
+
+        if isinstance(value, str) and not value.strip():
+            missing.append(key)
+            continue
+
+        loaded[key] = value
+
+    if missing:
+        stop_for_missing_secrets(missing)
+
+    return loaded
+
+
+APP_SECRETS = load_required_secrets()
+GEMINI_API_KEY = str(APP_SECRETS["GEMINI_API_KEY"])
+SHEET_ID = str(APP_SECRETS["SHEET_ID"])
+GOOGLE_CREDS_JSON = APP_SECRETS["GOOGLE_CREDS_JSON"]
+
+THEME_OPTIONS = ["라이트 모드", "다크 모드"]
+DEFAULT_THEME = "라이트 모드"
+SETTINGS_PATH = PROJECT_DIR / ".streamlit" / "user_settings.json"
 
 REVIEW_INTERVALS = [1, 3, 7, 14, 30]
 
@@ -241,8 +312,34 @@ def apply_theme(theme: str) -> None:
         )
 
 
+def load_saved_theme() -> str:
+    try:
+        settings = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return DEFAULT_THEME
+
+    theme = settings.get("selected_theme")
+    return theme if theme in THEME_OPTIONS else DEFAULT_THEME
+
+
+def save_theme(theme: str) -> None:
+    if theme not in THEME_OPTIONS:
+        return
+
+    try:
+        SETTINGS_PATH.parent.mkdir(exist_ok=True)
+        SETTINGS_PATH.write_text(
+            json.dumps({"selected_theme": theme}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        st.warning(f"화면 모드 저장 실패: {exc}")
+
+
 if "selected_theme" not in st.session_state:
-    st.session_state.selected_theme = "라이트 모드"
+    st.session_state.selected_theme = load_saved_theme()
+elif st.session_state.selected_theme not in THEME_OPTIONS:
+    st.session_state.selected_theme = DEFAULT_THEME
 
 selected_theme = st.session_state.selected_theme
 apply_theme(selected_theme)
@@ -259,37 +356,17 @@ def render_theme_selector() -> None:
     )
     selected = st.radio(
         "화면 모드 선택",
-        ["라이트 모드", "다크 모드"],
+        THEME_OPTIONS,
         horizontal=True,
         key="selected_theme",
         label_visibility="collapsed",
     )
     if selected != selected_theme:
+        save_theme(selected)
         st.rerun()
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")
-
-
-def check_password() -> bool:
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-
-    if st.session_state.authenticated:
-        return True
-
-    st.title("📚 Learning Bot")
-    st.caption("개인 학습 자동화 시스템")
-
-    password = st.text_input("비밀번호", type="password")
-
-    if st.button("입장"):
-        if password == APP_PASSWORD:
-            st.session_state.authenticated = True
-            st.rerun()
-        st.error("비밀번호가 틀렸습니다.")
-
-    return False
 
 
 @st.cache_resource
@@ -410,9 +487,6 @@ def play_audio_button(label: str, key: str, text: str, voice: str, rate: str) ->
 
 def main() -> None:
     render_theme_selector()
-
-    if not check_password():
-        return
 
     st.title("📚 Learning Bot")
 
