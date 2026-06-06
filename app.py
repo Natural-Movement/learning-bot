@@ -100,7 +100,7 @@ SHEET_ID = str(APP_SECRETS["SHEET_ID"])
 GOOGLE_CREDS_JSON = APP_SECRETS["GOOGLE_CREDS_JSON"]
 
 THEME_OPTIONS = ["라이트 모드", "다크 모드"]
-DEFAULT_THEME = "라이트 모드"
+DEFAULT_THEME = "다크 모드"
 SETTINGS_PATH = PROJECT_DIR / ".streamlit" / "user_settings.json"
 
 REVIEW_INTERVALS = [1, 3, 7, 14, 30]
